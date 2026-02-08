@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Code Generator</title>
+  <style>
+    :root {
+      --bg: #f3f4f6;
+      --card: white;
+      --text: #1f2937;
+      --text-secondary: #4b5563;
+      --border: #d1d5db;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --success: #10b981;
+      --success-hover: #059669;
+    }
+    [data-theme="dark"] {
+      --bg: #111827;
+      --card: #1f2937;
+      --text: #f3f4f6;
+      --text-secondary: #9ca3af;
+      --border: #374151;
+      --primary: #818cf8;
+      --primary-hover: #6366f1;
+      --success: #34d399;
+      --success-hover: #10b981;
+    }
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      transition: background 0.3s, color 0.3s;
+      position: relative;
+    }
+    .credit {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      opacity: 0.7;
+      pointer-events: none;
+      user-select: none;
+      z-index: 999;
+    }
+    .credit a {
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+    .credit a:hover { text-decoration: underline; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 1.5rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+    .toggle-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      transition: background 0.3s;
+    }
+    label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text); }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      background: var(--bg);
+      color: var(--text);
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    .form-group { margin-bottom: 1.2rem; }
+    .buttons { display: flex; gap: 12px; margin-top: 1.5rem; flex-wrap: wrap; }
+    button {
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #generateBtn { background: var(--primary); color: white; }
+    #generateBtn:hover { background: var(--primary-hover); }
+    #copyBtn, #downloadBtn { background: var(--success); color: white; }
+    #copyBtn:hover:not(:disabled), #downloadBtn:hover:not(:disabled) { background: var(--success-hover); }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    #qrcode { text-align: center; margin-top: 1.5rem; }
+    #qrcode canvas, #qrcode img {
+      border: 10px solid var(--card);
+      border-radius: 12px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      background: white;
+    }
+    .result-info { margin-top: 1rem; color: var(--text-secondary); font-size: 0.95rem; text-align: center; }
+  </style>
+</head>
+<body>
+
+<div class="credit">
+  Made by That-Chill-Programmer (Habibi_G)<br>
+  <a href="https://github.com/That-Chill-Programmer" target="_blank">GitHub</a>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>QR Code Generator</h1>
+    <button class="toggle-btn" id="themeToggle">Dark Mode</button>
+  </div>
+
+  <div class="grid">
+
+    <div class="card">
+      <div class="form-group">
+        <label for="contentType">Content type</label>
+        <select id="contentType">
+          <option value="text">Text / URL</option>
+          <option value="email">Email</option>
+          <option value="vcard">Contact (vCard)</option>
+          <option value="event">Calendar Event</option>
+          <option value="geo">Geo Location</option>
+          <option value="wifi">Wi-Fi</option>
+          <option value="phone">Phone</option>
+          <option value="sms">SMS</option>
+        </select>
+      </div>
+
+      <div id="inputFields">
+        <!-- Text / URL -->
+        <div id="textFields" class="form-group">
+          <label for="textContent">Content</label>
+          <textarea id="textContent" rows="4" placeholder="https://example.com or any text..."></textarea>
+        </div>
+
+        <!-- Email -->
+        <div id="emailFields" class="form-group" style="display:none;">
+          <label for="emailTo">To</label>
+          <input type="email" id="emailTo" placeholder="someone@example.com">
+          <label for="emailSubject">Subject</label>
+          <input type="text" id="emailSubject" placeholder="Meeting reminder">
+          <label for="emailBody">Body</label>
+          <textarea id="emailBody" rows="3" placeholder="Hi, don't forget..."></textarea>
+        </div>
+
+        <!-- vCard -->
+        <div id="vcardFields" class="form-group" style="display:none;">
+          <label for="vcName">Name</label>
+          <input type="text" id="vcName" placeholder="John Doe">
+          <label for="vcPhone">Phone</label>
+          <input type="tel" id="vcPhone" placeholder="+49123456789">
+          <label for="vcEmail">Email</label>
+          <input type="email" id="vcEmail" placeholder="john@example.com">
+        </div>
+
+        <!-- Calendar Event -->
+        <div id="eventFields" class="form-group" style="display:none;">
+          <label for="evSummary">Event title</label>
+          <input type="text" id="evSummary" placeholder="Team Meeting">
+          <label for="evStart">Start (YYYY-MM-DDTHH:MM)</label>
+          <input type="datetime-local" id="evStart">
+          <label for="evEnd">End (YYYY-MM-DDTHH:MM)</label>
+          <input type="datetime-local" id="evEnd">
+          <label for="evLocation">Location (optional)</label>
+          <input type="text" id="evLocation" placeholder="Conference Room A">
+        </div>
+
+        <!-- Geo -->
+        <div id="geoFields" class="form-group" style="display:none;">
+          <label for="geoLat">Latitude</label>
+          <input type="number" step="any" id="geoLat" placeholder="48.8566">
+          <label for="geoLon">Longitude</label>
+          <input type="number" step="any" id="geoLon" placeholder="2.3522">
+          <label for="geoLabel">Label (optional)</label>
+          <input type="text" id="geoLabel" placeholder="Eiffel Tower">
+        </div>
+
+        <!-- Wi-Fi -->
+        <div id="wifiFields" class="form-group" style="display:none;">
+          <label for="wifiSSID">SSID</label>
+          <input type="text" id="wifiSSID" placeholder="MyWiFi">
+          <label for="wifiPass">Password</label>
+          <input type="text" id="wifiPass" placeholder="secret123">
+        </div>
+
+        <!-- Phone -->
+        <div id="phoneFields" class="form-group" style="display:none;">
+          <label for="phoneNumber">Phone number</label>
+          <input type="tel" id="phoneNumber" placeholder="+1234567890">
+        </div>
+
+        <!-- SMS -->
+        <div id="smsFields" class="form-group" style="display:none;">
+          <label for="smsNumber">Phone number</label>
+          <input type="tel" id="smsNumber" placeholder="+1234567890">
+          <label for="smsMessage">Message</label>
+          <textarea id="smsMessage" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="qrSize">QR Size</label>
+        <select id="qrSize">
+          <option value="180">Small (180 px)</option>
+          <option value="260" selected>Medium (260 px)</option>
+          <option value="380">Large (380 px)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="qrFilename">Download filename</label>
+        <input type="text" id="qrFilename" placeholder="my-qr-code" value="qrcode">
+      </div>
+
+      <div class="buttons">
+        <button id="generateBtn">Generate QR</button>
+        <button id="copyBtn" disabled>Copy to Clipboard</button>
+        <button id="downloadBtn" disabled>Download PNG</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div id="qrcode">
+        <div style="height:260px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);">
+          QR code will appear here
+        </div>
+      </div>
+      <div id="resultInfo" class="result-info"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  // Theme handling
+  const themeToggle = document.getElementById('themeToggle');
+  const currentTheme = localStorage.getItem('theme') || 'light';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  themeToggle.textContent = currentTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+
+  themeToggle.addEventListener('click', () => {
+    const newTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    themeToggle.textContent = newTheme === 'dark' ? 'Light Mode' : 'Dark Mode';
+  });
+
+  const typeSelect = document.getElementById('contentType');
+  const inputFields = document.getElementById('inputFields');
+  const qrSizeSelect = document.getElementById('qrSize');
+  const generateBtn = document.getElementById('generateBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const qrContainer = document.getElementById('qrcode');
+  const filenameInput = document.getElementById('qrFilename');
+
+  let currentQRDataUrl = null;
+  let currentSize = 260;
+
+  typeSelect.addEventListener('change', () => {
+    Array.from(inputFields.children).forEach(el => el.style.display = 'none');
+    const target = document.getElementById(typeSelect.value + 'Fields');
+    if (target) target.style.display = 'block';
+    else document.getElementById('textFields').style.display = 'block';
+  });
+
+  qrSizeSelect.addEventListener('change', () => {
+    currentSize = parseInt(qrSizeSelect.value);
+  });
+
+  generateBtn.addEventListener('click', () => {
+    let content = '';
+
+    const size = currentSize;
+
+    switch (typeSelect.value) {
+      case 'text':
+        content = document.getElementById('textContent').value.trim();
+        break;
+      case 'email':
+        const to = document.getElementById('emailTo').value.trim();
+        const subj = encodeURIComponent(document.getElementById('emailSubject').value.trim());
+        const body = encodeURIComponent(document.getElementById('emailBody').value.trim());
+        if (!to) return alert('Enter recipient email');
+        content = `mailto:${to}?subject=${subj}&body=${body}`;
+        break;
+      case 'vcard':
+        const name = document.getElementById('vcName').value.trim();
+        const phone = document.getElementById('vcPhone').value.trim();
+        const email = document.getElementById('vcEmail').value.trim();
+        if (!name) return alert('Enter name');
+        content = `BEGIN:VCARD\nVERSION:3.0\nN:${name};;;\n`;
+        if (phone) content += `TEL:${phone}\n`;
+        if (email) content += `EMAIL:${email}\n`;
+        content += `END:VCARD`;
+        break;
+      case 'event':
+        const summary = document.getElementById('evSummary').value.trim();
+        const start = document.getElementById('evStart').value;
+        const end = document.getElementById('evEnd').value;
+        const loc = document.getElementById('evLocation').value.trim();
+        if (!summary || !start || !end) return alert('Enter title, start and end time');
+        content = `BEGIN:VEVENT\nSUMMARY:${summary}\nDTSTART:${start.replace(/[-:]/g,'')}\nDTEND:${end.replace(/[-:]/g,'')}\n`;
+        if (loc) content += `LOCATION:${loc}\n`;
+        content += `END:VEVENT`;
+        break;
+      case 'geo':
+        const lat = document.getElementById('geoLat').value.trim();
+        const lon = document.getElementById('geoLon').value.trim();
+        const label = encodeURIComponent(document.getElementById('geoLabel').value.trim());
+        if (!lat || !lon) return alert('Enter latitude and longitude');
+        content = `geo:${lat},${lon}${label ? '?q=' + lat + ',' + lon + '(' + label + ')' : ''}`;
+        break;
+      case 'wifi':
+        const ssid = document.getElementById('wifiSSID').value.trim();
+        const pass = document.getElementById('wifiPass').value.trim();
+        if (!ssid) return alert('Enter WiFi name');
+        content = `WIFI:S:${ssid};T:WPA;P:${pass};;`;
+        break;
+      case 'phone':
+        const num = document.getElementById('phoneNumber').value.trim();
+        if (!num) return alert('Enter phone number');
+        content = `tel:${num}`;
+        break;
+      case 'sms':
+        const smsNum = document.getElementById('smsNumber').value.trim();
+        const msg = encodeURIComponent(document.getElementById('smsMessage').value.trim());
+        if (!smsNum) return alert('Enter phone number');
+        content = `smsto:${smsNum}${msg ? ':' + msg : ''}`;
+        break;
+      default:
+        content = document.getElementById('textContent').value.trim();
+    }
+
+    if (!content) {
+      alert('Please fill required fields');
+      return;
+    }
+
+    qrContainer.innerHTML = '';
+
+    new QRCode(qrContainer, {
+      text: content,
+      width: size,
+      height: size,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    setTimeout(() => {
+      const canvas = qrContainer.querySelector('canvas');
+      if (canvas) {
+        currentQRDataUrl = canvas.toDataURL('image/png');
+        copyBtn.disabled = false;
+        downloadBtn.disabled = false;
+      }
+    }, 300);
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    if (!currentQRDataUrl) return;
+    try {
+      const blob = await (await fetch(currentQRDataUrl)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy to Clipboard', 2000);
+    } catch (err) {
+      alert('Copy failed. Try right-click → Copy image.');
+    }
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    if (!currentQRDataUrl) return;
+    let name = (filenameInput.value || 'qrcode').trim().replace(/[^a-zA-Z0-9-_]/g, '_');
+    const a = document.createElement('a');
+    a.download = name + '.png';
+    a.href = currentQRDataUrl;
+    a.click();
+  });
+</script>
+</body>
+</html>
